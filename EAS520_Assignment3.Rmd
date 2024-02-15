@@ -1,0 +1,708 @@
+---
+title: "Geoscience Data Analysis Assignment 3"
+author: "Saheed"
+date: "2024-01-31"
+output: github_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Assignment Preparation
+
+This assignment depends on you following these guidelines:
+
+1.  **Read all instructions**
+
+2.  **Run every cell, in order**
+
+3.  All the instructions to complete this assignment are contained
+    within it. Make sure you read it as you work through the questions.
+
+4.  Marked questions have example code (IN CAPS) that you can use as a
+    basis for your solution. Don't use caps in your solutions - replace
+    the parts in caps with lowercase, proper code. The caps is only
+    intended to signal replacement.
+
+5.  At the end of the sheet are tests. You can use these cells to double
+    check that you have calculated the correct answer. **Do not change
+    cells with tests in them.**
+
+### Setup Instructions
+
+1.  This assignment assumes you are using GitHub, as described on the
+    course documents on eClass, and in the lecture. As such, your first
+    step should be to clone your class repository into a short
+    directory.
+
+2.  Once your repository is cloned, in Rstudio, open a new project
+    inside the subdirectory called "Assignment_3".
+
+3.  Save this file (EAS520_Assignment_3.Rmd) in your project directory.
+
+4.  Download a copy of the required data from eClass:
+    climate_three_cities.csv, billboard.csv, and unemployment_rates.csv.
+    Save these files in your project directory.
+
+5.  You are now ready to proceed!
+
+## Exercise 1: Load the Relevant Packages (2 points)
+
+All of the functions you need for this assignment are contained within
+the `tidyverse` package library. As described in class, you need to
+first install and then load the packages. Do so in the cell below.
+
+```{r}
+# Install and load the tidyverse package library. For example:
+
+# install.packages(PACKAGE_NAME)
+# library(PACKAGE_NAME)
+
+# your code here -------------------------------------------
+install.packages("tidyverse")
+library(tidyverse)
+
+
+```
+
+## Exercise 2: Load Climate Data (2 points)
+
+In this exercise, you are tasked with loading the climate data from the
+file `climate_three_cities.csv`. The data are similar to the data from
+last week, but now contain data for three cities: Edmonton, Toronto, and
+Vancouver. The data is already fairly clean. Your task is to load the
+data, and then assin the correct data types to the columns. In
+parciular, `name` and `station_id` should be `factors`, and `date`
+should be a `date`.
+
+```{r}
+# Load the climate data from the file climate_three_cities.csv. Assign it to a 
+# variable named weather. You can use either read_csv or base read.csv for the
+# task, just make sure the data types are correct.
+
+# Example:
+
+# DATA_FRAME <- read_csv("FILE_NAME", col_types = cols(
+#   COLUMN_NAME = col_factor(),
+#   ...,
+# )
+#)
+
+# your code here -------------------------------------------
+weather <- read_csv("~/GitHub/eas520_Saedshittu/Assignment_3/climate_three_cities.csv",
+                    col_types = cols(
+                      date = col_date(), name = col_factor(),
+                      station_id = col_factor()
+                    ))
+weather
+```
+
+## Exercise 3: Average Temperature by City (2 points)
+
+With the climate data loaded, use some of your newly acquired tidyverse
+skill to figure out the average temperature for each city. Consider all
+of the data within the dataframe. To figure this out, you will have to
+`group_by` the `name` column, and then use the `summarize` function to
+calculate the `mean` temperature. Assign your results to three variables
+named `edmonton_avg_temp`, `toronto_avg_temp`, and `vancouver_avg_temp`.
+
+```{r}
+# Use the climate data to calculate the average temperature for each city.
+
+# Example:
+# AVERAGE_PER_CITY <- DATA_FRAME %>% 
+#    group_by(GROUPING_COLUMN) %>%
+#    summarize(NEW_COLUMN = FUNCTION(COLUMN))
+
+# AVERAGE_TEMP_CITY <- AVERAGE_PER_CITY$NEW_COLUMN[1]
+
+# your code here -------------------------------------------
+average_per_city <- weather %>%
+  group_by(name) %>%
+  summarize(ave_temp = mean(mean_temp_c))
+
+edmonton_avg_temp <- average_per_city$ave_temp[1]
+edmonton_avg_temp
+
+toronto_avg_temp <- average_per_city$ave_temp[3]
+toronto_avg_temp
+
+vancouver_avg_temp <- average_per_city$ave_temp[2]
+vancouver_avg_temp
+
+```
+
+## Exercise 4: Monthly Snowfall (2 points)
+
+This data was collected in the year 2010. During that year, what was the
+snowiest month for each city? In other words, for each city, during what
+month did the most snow fall as precipitation? Disregard any amount that
+was below the measurement threshool. Assign your results to three
+variables named `edmonton_snowiest_month`, `toronto_snowiest_month`, and
+`vancouver_snowiest_month`.
+
+```{r}
+# Use the climate data to calculate the snowiest month for each city.
+# Hint: You'll need to mutate() a new column for the month (try lubridate::month() to get that), group by that new column, summarize, and then group again on the city name, and find the maximum. Note: if you are grouping more than once, you need to use the .groups='drop' argument in summarize() to drop the intermediate grouping.
+
+
+# your code here -------------------------------------------
+snow_month <- weather %>%
+  mutate(month = lubridate::month(date))%>%
+  group_by(name, month) %>%
+  summarize(total_precipitation = sum(total_snow_cm, 
+                                      na.rm = TRUE),
+            .groups = "drop") %>%
+  group_by(name)%>%
+  filter(total_precipitation == max(total_precipitation))
+snow_month
+edmonton_snowiest_month <- snow_month %>% 
+  filter(name == "EDMONTON INT'L A") %>%
+  pull(month)
+edmonton_snowiest_month
+
+toronto_snowiest_month <- snow_month %>%
+  filter(name == "TORONTO LESTER B. PEARSON INT'L A") %>%
+  pull(month)
+toronto_snowiest_month
+
+vancouver_snowiest_month <- snow_month %>%
+  filter(name == "VANCOUVER INT'L A") %>%
+  pull(month)
+vancouver_snowiest_month
+
+
+
+```
+
+## Exercise 5: Load Billboard Data (2 points)
+
+In this exercise, you are tasked with loading the billboard data from
+the file `billboard.csv`. The data contains information about the weekly
+ranking of songs on the Billboard Top 100 list, from the year 2000.
+
+Follow the procedure from the lecture to load the data and set the data
+types. If you use `read_csv`, it will try to set some of the week
+columns to boolean data. To prevent this, set `.default=col_double` in
+the `col_types` argument. This tells `read_csv` that you want the
+columns to be numeric unless you otherwise specify.
+
+Assign the resulting data frame to a variable called `billboard`. Do not
+worry about naming the columns or tidying the data yet, just load it and
+assign the correct data types.
+
+```{r}
+# Don't forget: you can use either read_csv or base read.csv for the task, just make sure the data types are correct.
+
+# your code here -------------------------------------------
+billboard <- read_csv("~/GitHub/eas520_Saedshittu/Assignment_3/billboard.csv",
+                      col_types = cols(.default = col_double(),
+                                       artist.inverted = col_factor(),
+                                       track = col_factor(),
+                                       time = col_time(),
+                                       genre = col_factor(),
+                                       date.entered = col_date(),
+                                       date.peaked = col_date(),
+                                       )
+                      )
+billboard
+
+billboard_2 <- billboard %>%
+  rename(artist = artist.inverted, date = date.entered) %>%
+  select(!contains("date.peaked"))
+names(billboard_2)[7:82] <- paste0("wk", 1:76)
+
+```
+
+```{}
+```
+
+## Exercise 6: Tidy Billboard Data (2 points)
+
+Repeat the exercise we did together in class, but on your own. You need
+to alter the dataframe to create a tidy dataset, where the observations
+(the rank of the song on a particular week) are in their own rows.
+Remember, the dataset should have the following variables: `year`,
+`artist`, `time`, `track`, `date`, `genre`, `week`, and `rank.` Remember
+to remove the `NA` values, they can interfere with later analysis.
+
+Assign the result to a variable named `billboard_tidy`.
+
+Here are some tips:
+
+1.  The `week` columns are in a wide format. You will need to use
+    `pivot_longer` to make them long. It is suggested that you rename
+    them, and you don't need to use the `tidy` approach. In this case,
+    base R works better (imho). You can use
+    `names(DATA_FRAME)[START_COL_INDEX:END_COL_INDEX] <- paste0("wk", START_NUM:END_NUM)`
+    to rename the columns **before you pivot**.
+
+2.  Once the data has been pivoted, you will need to make sure `week` is
+    numeric. You will also need to filter out any na values in the
+    `week` column, as they could unintentionally impact the next
+    analyses.
+
+```{r}
+
+
+# Example:
+# DATA_FRAME_PIVOTED <- DATA_FRAME %>%
+#   pivot_longer(
+#     cols = starts_with("START_PATTERN"),
+#     names_to = "NAME_OF_NEW_COLUMN_WITH_FORMER_COLUMN_NAMES",
+#     values_to = "NAME_OF_NEW_COLUMN_WITH_VALUES"
+#   )
+
+# Your Code Here --------------------------------------
+
+billboard_tidy <- billboard_2 %>%
+  pivot_longer(
+    cols = starts_with("wk"),
+               names_to = "week",
+               values_to = "series"
+    ) %>%
+  mutate(week = parse_number(week)) %>%
+  filter(!is.na(series))
+billboard_tidy
+  
+```
+
+## Exercise 7: Most Popular Genres (2 points)
+
+Based on the data, in 2000, what genres were most popular? Assess this
+from the total number of weeks that a song in that genre was on the top
+chart, and what the average rank for that genre was. Assign the results
+to two variables, named `genre_with_most_weeks` and
+`genre_with_best_rank`.
+
+```{r}
+# Use the billboard data to calculate the total number of weeks that a song in that genre was on the top chart, and what the average rank for that genre was. You can group_by() the genre, and then summarize() the total number of weeks and the average rank. Hint: to count the number of rows in a group (in this case, the number of weeks), use n() in the summarize() function.
+
+# For example:
+# DATA_FRAME %>%
+#   group_by(GROUPING_VARIABLE) %>%
+#   summarize(
+#     total = sum(VARIABLE1),
+#    average = mean(VARIABLE2),
+#    count = n())
+
+# your code here -------------------------------------------
+summarized_billboard <- billboard_tidy %>%
+  group_by(genre) %>%
+  summarise(total_week = sum(week),
+            average_rank = mean(rank),
+            count = n()
+            )
+summarized_billboard
+
+genre_with_most_weeks <- summarized_billboard %>%
+  filter(total_week == max(total_week)) %>%
+  pull(genre)
+genre_with_most_weeks
+
+genre_with_best_rank <- summarized_billboard %>%
+  filter(average_rank == min(average_rank)) %>%
+  pull(genre)
+genre_with_best_rank
+
+
+```
+
+# Exercise 8: Unemployment Data (2 points)
+
+Now let's work with a dataset you have not seen before. Load the
+unemployment_rates.csv file. Look through the file and describe why this
+would not be considered "tidy" data. Describe a plan to clean it.
+Explain what the observations are, and name the variables.
+
+```{r}
+# Your answer here - no code, just describe and plan.
+#Noticed numerical inconsistency in the "month" column, and there are still existing missing values (NA) in the variable "year".
+unemployment_rates <- readr::read_csv("~/GitHub/eas520_Saedshittu/Assignment_3/unemployment_rates.csv",
+                                      col_types = cols(.default = col_double(),
+                                                       month = col_factor()
+                                                       )
+                                      )
+names(unemployment_rates)[2:50] <- paste0("year", 1967:2015)
+```
+
+# Exercise 9: Clean Unemployment Data (2 points)
+
+Based on your plan, clean the unemployment data. Assign the clean
+dataframe to a variable called `unemployment`.
+
+```{r}
+# Your code here -------------------------------------------
+
+unemployment <- unemployment_rates %>%
+  pivot_longer(cols = 2:50,
+               names_to = "year",
+               values_to = "rate") %>%
+  mutate(year = parse_number(year)) %>%
+  filter(!is.na(rate))
+unemployment
+
+```
+
+# Exercise 10: Unemployment Data Analysis (2 points)
+
+What were the maximum three values of unemployment rate, and during
+which years did they occur? Assign the results to two variables, named
+`years_of_highest_unemployment` and `highest_unemployment_values`.
+
+```{r}
+# Your basic task is to summarize values by year, to get the average 
+# unemployment rate, and then assign those to varibles for testing.
+
+# Your code here -------------------------------------------
+
+years_of_highest_unemployment <- NULL
+highest_unemployment_values <- NULL
+
+```
+
+# Exercise 11: Unemployment Annual Plot (2 points)
+
+Using your results from Exercise 9, produce a line plot of unemployment
+rates over time. Your x-axis should show the year, and your y-axis
+should show the unemployment rate. Include informative x and y axis
+labels, and a title for your plot.
+
+```{r}
+
+# Recall that to make a plot, the basic syntax is:
+# plot(x=X_AXIS_VAR, y=Y_AXIS_VAR)
+# You can add other arguments. Specify the type of the plot is a line (type = "l").
+# Add labels with xlab, ylab, and main arguments.
+
+# Your code here -------------------------------------------
+#plot()
+
+# OPTIONAL: Highlight years with highest unemployment
+# Run this line after the plot to highlight the highest years with points
+# To make this work, create a highest_rate data frame with the top three years and their unemployment rates. 
+# You can use filter() to accomplish this, or arrange() and head().
+# Remember, this is OPTIONAL, and just here to expose you to other things
+# you can do with plots.
+
+# Un-comment this next line to add it to your code.
+#points(x = highest_rate$year, y = highest_rate$average_unemployment, col = "red", pch = 19)
+
+```
+
+# Exercise 12: Unemployment Data Analysis (2 points)
+
+Unemployment changes year-to-year Use the `lag` function to `mutate` a
+new column that describes how unemployment changes each month. What is
+the greatest change? Assign it to a variable called `greatest_change`.
+
+```{r}
+# To get the annual change, I would take the previous dataframe, and do something
+# like this:
+
+# CHANGE_PER_YEAR <- ANNUAL_GROUPED_UNEMPLOYMENT %>% 
+#   mutate(NEW_NAME = AVERAGE_EMPLOYMENT_COLUMN - lag(AVERAGE_EMPLOYMENT_COLUMN))
+
+# Be careful - there will be NA values. You can use the na.rm argument in the max function to remove them.
+
+# Your code here -------------------------------------------
+unemployment_tidy <- unemployment %>%
+  group_by(year) %>%
+  summarize(average_rate = mean(rate))
+unemployment_tidy
+change_per_year <-  unemployment_tidy %>%
+  mutate(annual_rate = average_rate - lag(average_rate))
+change_per_year <- change_per_year[order(change_per_year$annual_rate, decreasing = TRUE),]
+greatest_change <- change_per_year [1,3]
+greatest_change
+
+```
+
+# Tests: Use these to check your answers
+
+```{r Import Testing Libraries, include=FALSE}
+# Do not change this cell!
+# check if digest is installed, and if not, install it
+if(!require(digest)) install.packages("digest")
+# check if testthat is installed, and if not, install it.
+if(!require(testthat)) install.packages("testthat")
+# load the libraries
+library(digest)
+library(testthat)
+```
+
+## Exercise 1 Test: Check if tidyverse is loaded
+
+```{r test that tidyverse is loaded, echo=FALSE}
+tryCatch({
+  test_that("The tidyverse has not been correctly loaded.", {
+    expect_true("dplyr" %in% .packages() && "tidyr" %in% .packages() && "lubridate" %in% .packages(), 
+            info = "Did you load the tidyverse package library?")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+```
+
+## Exercise 2 Test: Check if the climate data is loaded
+
+```{r test that climate data is loaded, echo=FALSE}
+tryCatch({
+  test_that("The climate data has not been correctly loaded.", {
+    expect_true(is.factor(weather$name) && is.factor(weather$station_id) && is.Date(weather$date), 
+            info = "Did you remember to load the data and set the data types?")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+```
+
+## Exercise 3 Test: Check average temperatures
+
+```{r test edmonton average temperature, echo=FALSE}
+tryCatch({
+  test_that("The average temperature for edmonton is not correct (I got 2.32).", {
+    expect_equal(digest(edmonton_avg_temp), "9c05ca6e5ea7d20ff1508515ba16ef27")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+```
+
+```{r test toronto average temperature, echo=FALSE}
+tryCatch({
+  test_that("The average temperature for Toronto is not correct (I got 9.61).", {
+    expect_equal(digest(toronto_avg_temp), "7215400a84a39e306ac62d1ec4be1414")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+```{r test vancouver average temperature, echo=FALSE}
+tryCatch({
+  test_that("The average temperature for Vancouver is not correct (I got 11.00).", {
+    expect_equal(digest(vancouver_avg_temp), "60ae1893ab0490147f8b4700bb40bace")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+
+```
+
+## Exercise 4 Test
+
+```{r test Edmonton snowiest month, echo=FALSE}
+tryCatch({
+  test_that("The snowiest month for Edmonton is not correct (I got 5, meaning 'May').", {
+    expect_equal(digest(edmonton_snowiest_month), "5e338704a8e069ebd8b38ca71991cf94")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+```{r test Toronto snowiest month, echo=FALSE}
+tryCatch({
+  test_that("The snowiest month for Toronto is not correct (I got 2).", {
+    expect_equal(digest(edmonton_snowiest_month), "5e338704a8e069ebd8b38ca71991cf94")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+```{r test Vancouver snowiest month, echo=FALSE}
+tryCatch({
+  test_that("The snowiest month for Vancouver is not correct (I got 11).", {
+    expect_equal(digest(vancouver_snowiest_month), "e8c6c490beabf8e7ab89dcd59a75f389")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+## Exercise 5 Test
+
+```{r Test that billboard data is loading, echo=FALSE}
+tryCatch({
+  test_that("The billboard data may not be correctly loading. Double check that all the week columns are numeric; artist, track, genre are factors; and date.entered and date.peaked are dates.", {
+    expect_true(is.factor(billboard$genre) && is.numeric(billboard[[25]]) && is.Date(billboard$date.entered))
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+
+
+```
+
+## Exercise 6 Test
+
+```{r Test that billboard data is tidy, echo=FALSE}
+tryCatch({
+  test_that("All column names are not present.", {
+    expect_true((names(billboard_tidy) %in% c("year", "artist", "time", "track", "date", "genre", "week", "rank")) %>% all())
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+```
+
+```{r Test length of tidy billboard data, echo=FALSE}
+tryCatch({
+  test_that("There is an unexpected quantity of rows (I expect 5307). Did you remember to remove NA values?", {
+    expect_true(length(billboard_tidy$year) == 5307)
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+```
+
+## Exercise 7 Test
+
+```{r Test that genre with most weeks is correct, echo=FALSE}
+tryCatch({
+  test_that("The genre with most weeks has an unexpected value (I expected 'Rock').", {
+    expect_true(genre_with_most_weeks == "Rock")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+```{r Test that genre with best rank is correct, echo=FALSE}
+tryCatch({
+  test_that("The genre with the highest average rank has an unexpected value (I again expected 'Rock').", {
+    expect_true(genre_with_best_rank == "Rock")
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+## No tests for Exercises 8 and 9
+
+## Exercise 10 Test
+
+```{r Test that the highest unemployment rates are accurate, echo=FALSE}
+tryCatch({
+  test_that("Those are not the highest values that I found (I got 4.791667, 4.641667, and 4.625000).", {
+    expect_true(all(highest_values > 4.62) && length(highest_values) == 3)
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+```{r Test that the highest unemployment years are accurate, echo=FALSE}
+tryCatch({
+  test_that("Those are not the highest years that I found (I got 1982, 2009, and 2010).", {
+    expect_true(years_of_highest_unemployment %in% c(2010, 2009, 1982) %>% all())
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+```
+
+## Exercise 12 Test
+
+```{r Test that the greatest change is accurate, echo=FALSE}
+tryCatch({
+  test_that("That is not the greatest change that I found (I got 1.708333).", {
+    expect_true(round(greatest_change, 6) == 1.708333)
+  })
+}, error = function(e) {
+      if (grepl("could not find function", e$message)) {
+        cat("Error: Necessary package not installed. Have you run the 'Import Testing Libraries' cell?")
+    } else {
+        cat(e$message)
+    }
+})
+
+
+```
+
+# Submit your Assignment
+
+To submit your assignment, push it to your class repository. Remember to
+commit often. If you are running into challenges, email your instructors
+as soon as possible.
+
+**Due Date**: February 7th, 2024 by 6:00pm
+
+**Grading**: 24 potential points for 12 questions
+
+Note on grading: for each quantitative question, 1 point will be awarded
+for the code executing without errors, and one point will be awarded for
+the correct value. If you find a mistake, need help, or have any
+questions, email your instructors.
